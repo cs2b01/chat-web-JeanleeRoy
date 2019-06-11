@@ -20,6 +20,32 @@ def static_content(content):
     return render_template(content)
 
 
+# #---- LOGIN AUTHENTICATION ---------------------------
+
+
+@app.route('/authenticate', methods = ['POST'])
+def authenticate():
+    time.sleep(1)
+    # 1. Get request
+    message = json.loads(request.data)
+    username = message['username']
+    password = message['password']
+
+    # 2. look in database
+    db_session = db.getSession(engine)
+    try:
+        user = db_session.query(entities.User
+            ).filter(entities.User.username == username
+            ).filter(entities.User.password == password
+            ).one()
+        session['logged_user'] = user.id
+        message = {'message': 'Authorized'}
+        return Response(message, status=200, mimetype='applcation/json')
+    except Exception:
+        message = {'message': 'Unauthorized'}
+        return Response(message, status=401, mimetype='applcation/json')
+
+
 # #---- USERS METHODS ---------------------------
 
 
@@ -93,31 +119,6 @@ def delete_message():
     return "Deleted Message"
 
 
-# #---- LOGIN AUTHENTICATION ---------------------------
-
-
-@app.route('/authenticate', methods = ['POST'])
-def autheticate():
-    time.sleep(4)
-    # 1. Get request
-    message = json.loads(request.data)
-    username = message['username']
-    password = message['password']
-
-    # 2. lokk in database
-    db_session = db.getSession(engine)
-    try:
-        user = db_session.query(entities.User
-            ).filter(entities.User.username == username
-            ).filter(entities.User.password == password
-            ).one()
-        message = {'message': 'Authorized'}
-        return Response(message, status=200, mimetype='applcation/json')
-    except Exception:
-        message = {'message': 'Unauthorized'}
-        return Response(message, status=401, mimetype='applcation/json')
-
-
 # #---- MESSAGES METHODS ---------------------------
 
 
@@ -152,6 +153,43 @@ def create_test_messages():
     db_session.add(message)
     db_session.commit()
     return "Test message created!"
+
+
+# #---- MESSAGES METHODS ---------------------------
+
+
+@app.route('/current', methods = ["GET"])
+def current_user():
+    db_session = db.getSession(engine)
+    user = db_session.query(entities.User).filter(
+        entities.User.id == session['logged_user']
+        ).first()
+    return Response(json.dumps(
+            user,
+            cls=connector.AlchemyEncoder),
+            mimetype='application/json'
+        )
+
+
+def object_as_dict(obj):
+    return {c.key: getattr(obj, c.key)
+            for c in inspect(obj).mapper.column_attrs}
+
+
+@app.route('/current_chat/', methods=["GET"])
+def current_chat():
+    db_session = db.getSession(engine)
+    data = json.loads(request.data)
+    other_user = data['id']
+#   curr_id = session['logged_user']
+    print(other_user)
+    messages = db_session.query(entities.Message).filter(entities.Message.user_from_id == other_user)
+    print(messages)
+    data = []
+    for msg in messages:
+        print(msg)
+        data.append(msg)
+    return Response(json.dumps(data, cls=connector.AlchemyEncoder), mimetype='application/json')
 
 
 if __name__ == '__main__':
