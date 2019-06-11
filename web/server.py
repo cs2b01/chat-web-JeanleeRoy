@@ -9,13 +9,18 @@ engine = db.createEngine()
 
 app = Flask(__name__)
 
+
 @app.route('/')
 def index():
     return render_template('index.html')
 
+
 @app.route('/static/<content>')
 def static_content(content):
     return render_template(content)
+
+
+# #---- USERS METHODS ---------------------------
 
 
 @app.route('/users', methods = ['GET'])
@@ -88,15 +93,18 @@ def delete_message():
     return "Deleted Message"
 
 
+# #---- LOGIN AUTHENTICATION ---------------------------
+
+
 @app.route('/authenticate', methods = ['POST'])
 def autheticate():
     time.sleep(4)
-    #1. Get request
+    # 1. Get request
     message = json.loads(request.data)
     username = message['username']
     password = message['password']
 
-    #2. lokk in database
+    # 2. lokk in database
     db_session = db.getSession(engine)
     try:
         user = db_session.query(entities.User
@@ -108,6 +116,42 @@ def autheticate():
     except Exception:
         message = {'message': 'Unauthorized'}
         return Response(message, status=401, mimetype='applcation/json')
+
+
+# #---- MESSAGES METHODS ---------------------------
+
+
+@app.route('/messages', methods = ['GET'])
+def get_Message():
+    session = db.getSession(engine)
+    dbResponse = session.query(entities.Message)
+    data = []
+    for messages in dbResponse:
+        data.append(messages)
+    return Response(json.dumps(data, cls=connector.AlchemyEncoder), mimetype='application/json')
+
+
+@app.route('/messages', methods = ['POST'])
+def create_Message():
+    c = json.loads(request.form['values'])
+    message = entities.Message(
+        content=c['content'],
+        user_from_id=c['user_from_id'],
+        user_to_id=c['user_to_id'],
+    )
+    session = db.getSession(engine)
+    session.add(message)
+    session.commit()
+    return 'Created Message'
+
+
+@app.route('/create_test_messages', methods = ['GET'])
+def create_test_messages():
+    db_session = db.getSession(engine)
+    message = entities.Message(content="Another message", user_from_id="2", user_to_id="4")
+    db_session.add(message)
+    db_session.commit()
+    return "Test message created!"
 
 
 if __name__ == '__main__':
