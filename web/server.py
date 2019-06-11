@@ -1,6 +1,7 @@
 from flask import Flask,render_template, request, session, Response, redirect
 from database import connector
 from model import entities
+import time
 import json
 
 db = connector.Manager()
@@ -17,6 +18,16 @@ def static_content(content):
     return render_template(content)
 
 
+@app.route('/users', methods = ['GET'])
+def get_users():
+    session = db.getSession(engine)
+    dbResponse = session.query(entities.User)
+    data = []
+    for user in dbResponse:
+        data.append(user)
+    return Response(json.dumps(data, cls=connector.AlchemyEncoder), mimetype='application/json')
+
+
 @app.route('/users/<id>', methods = ['GET'])
 def get_user(id):
     db_session = db.getSession(engine)
@@ -28,6 +39,7 @@ def get_user(id):
     message = { 'status': 404, 'message': 'Not Found'}
     return Response(message, status=404, mimetype='application/json')
 
+
 @app.route('/create_test_users', methods = ['GET'])
 def create_test_users():
     db_session = db.getSession(engine)
@@ -35,6 +47,7 @@ def create_test_users():
     db_session.add(user)
     db_session.commit()
     return "Test user created!"
+
 
 @app.route('/users', methods = ['POST'])
 def create_user():
@@ -50,12 +63,6 @@ def create_user():
     session.commit()
     return 'Created User'
 
-@app.route('/users', methods = ['GET'])
-def get_users():
-    session = db.getSession(engine)
-    dbResponse = session.query(entities.User)
-    data = dbResponse[:]
-    return Response(json.dumps(data, cls=connector.AlchemyEncoder), mimetype='application/json')
 
 @app.route('/users', methods = ['PUT'])
 def update_user():
@@ -69,6 +76,7 @@ def update_user():
     session.commit()
     return 'Updated User'
 
+
 @app.route('/users', methods = ['DELETE'])
 def delete_message():
     id = request.form['key']
@@ -78,6 +86,29 @@ def delete_message():
         session.delete(message)
     session.commit()
     return "Deleted Message"
+
+
+@app.route('/authenticate', methods = ['POST'])
+def autheticate():
+    time.sleep(4)
+    #1. Get request
+    message = json.loads(request.data)
+    username = message['username']
+    password = message['password']
+
+    #2. lokk in database
+    db_session = db.getSession(engine)
+    try:
+        user = db_session.query(entities.User
+            ).filter(entities.User.username == username
+            ).filter(entities.User.password == password
+            ).one()
+        message = {'message': 'Authorized'}
+        return Response(message, status=200, mimetype='applcation/json')
+    except Exception:
+        message = {'message': 'Unauthorized'}
+        return Response(message, status=401, mimetype='applcation/json')
+
 
 if __name__ == '__main__':
     app.secret_key = ".."
