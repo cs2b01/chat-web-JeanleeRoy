@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <title>Title</title>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
-    <script src="chat.js"></script>
 
 </head>
 <body>
@@ -20,6 +19,8 @@
                 <label id="cu_username"></label>
                 <br/>
                 <label id="cu_name"></label>
+                <br>
+                <p id="cu_id"></p>
             </div>
             <div id="allusers">
 
@@ -27,10 +28,16 @@
 
         </td>
         <td width="75%">
-            Mensajes
+            <h3>Mensajes</h3>
+            <div class="mensajes" id="mensajes">
+            </div>
+            <div class="text" id="text_padre">
+                <input type="text" placeholder="Mensaje" id="texto">
+                <button type="button" id="Enviar">Enviar</button>
+            </div>
         </td>
     </tr>
 </table>
-
+<script src="chat.js"></script>
 </body>
 </html>

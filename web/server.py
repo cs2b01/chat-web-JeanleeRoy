@@ -1,4 +1,5 @@
 from flask import Flask,render_template, request, session, Response, redirect
+from sqlalchemy import or_
 from database import connector
 from model import entities
 import time
@@ -155,7 +156,7 @@ def create_test_messages():
     return "Test message created!"
 
 
-# #---- MESSAGES METHODS ---------------------------
+# #---- CHAT METHODS ---------------------------
 
 
 @app.route('/current', methods = ["GET"])
@@ -171,25 +172,35 @@ def current_user():
         )
 
 
-def object_as_dict(obj):
-    return {c.key: getattr(obj, c.key)
-            for c in inspect(obj).mapper.column_attrs}
-
-
-@app.route('/current_chat/', methods=["GET"])
+@app.route('/current_chat/', methods=["POST"])
 def current_chat():
     db_session = db.getSession(engine)
-    data = json.loads(request.data)
-    other_user = data['id']
-#   curr_id = session['logged_user']
-    print(other_user)
-    messages = db_session.query(entities.Message).filter(entities.Message.user_from_id == other_user)
-    print(messages)
+    id_data = json.loads(request.data)
+    other_user = id_data['id']
+    curr_id = session['logged_user']
+    messages = db_session.query(entities.Message)\
+        .filter(or_((entities.Message.user_from_id == curr_id) & (entities.Message.user_to_id == other_user),
+                (entities.Message.user_from_id == other_user) & (entities.Message.user_to_id == curr_id)))
     data = []
     for msg in messages:
-        print(msg)
         data.append(msg)
     return Response(json.dumps(data, cls=connector.AlchemyEncoder), mimetype='application/json')
+
+
+@app.route('/send_message', methods=['POST'])
+def send_message():
+    msg_data = json.loads(request.data)
+    curr_id = session['logged_user']
+    message = entities.Message(
+        content=msg_data['content'],
+        user_from_id=curr_id,
+        user_to_id=msg_data['user_to_id'],
+    )
+    de_session = db.getSession(engine)
+    de_session.add(message)
+    de_session.commit()
+    print('ok')
+    return Response(status=200)
 
 
 if __name__ == '__main__':

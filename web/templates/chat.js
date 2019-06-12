@@ -1,3 +1,5 @@
+
+
 function whoami(){
         $.ajax({
             url:'/current',
@@ -5,7 +7,6 @@ function whoami(){
             contentType: 'application/json',
             dataType:'json',
             success: function(response){
-                alert(JSON.stringify(response));
                 $('#cu_username').html("@" + response['username']);
                 var name = response['name']+" "+response['fullname'];
                 $('#cu_name').html(name);
@@ -24,7 +25,6 @@ function whoami(){
             contentType: 'application/json',
             dataType:'json',
             success: function(response){
-                //alert(JSON.stringify(response));
                 var i = 0;
                 if (!usersFlag){
                     $.each(response, function(){
@@ -48,22 +48,60 @@ function whoami(){
         });
     }
 
+
     function showMessages(id){
-        var other_id = JSON.stringify({
+        $('#Enviar').on("click", function(){ sendMessage(id); });
+        var id_data = JSON.stringify({
                 "id": id
             });
-        console.log(id);
         $.ajax({
             url:'/current_chat',
-            type:'GET',
-            data : other_id,
+            type:'POST',
+            data : id_data,
             contentType: 'application/json',
             dataType:'json',
             success: function(response){
-                alert(JSON.stringify(response));
+                $('#mensajes').html("");
+                var i = 0;
+                $.each(response, function(){
+                    var f = '<div class="msg">';
+                    f = f + response[i].content;
+                    f = f + '</div>';
+                    $('#mensajes').append(f);
+                    i++;
+                });
+            },
+            error: function(){
+                alert('ERROR');
+            }
+        });
+    }
+
+    
+    function sendMessage(id) {
+        var text_content = $('#texto').val();
+        var msg_data = JSON.stringify({
+                "content" : text_content,
+                "user_to_id": id
+            });
+        $.ajax({
+            url:'/send_message',
+            type:'POST',
+            contentType: 'application/json',
+            data : msg_data,
+            dataType:'json',
+            success : function(){
+                alert('ok');
             },
             error: function(response){
-                alert('ERROR');
+                if (response['status'] === 401){
+                    alert("No se envio el mensaje :(")
+                } /*else {
+                    var f = '<div class="msg">';
+                    f = f + text_content;
+                    f = f + '</div>';
+                    $('#mensajes').append(f);
+                }*/
             }
         });
     }

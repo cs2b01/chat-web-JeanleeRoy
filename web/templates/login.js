@@ -13,7 +13,7 @@ function getData(){
             contentType: 'application/json',
             data : message,
             dataType:'json',
-            success : function(response){
+            success : function(responses){
 
             },
             error: function(response){
