@@ -40,11 +40,12 @@ def authenticate():
             ).filter(entities.User.password == password
             ).one()
         session['logged_user'] = user.id
-        message = {'message': 'Authorized'}
-        return Response(message, status=200, mimetype='applcation/json')
+        message = {'message': 'Authorized', 'user_id':user.id, 'username':user.username}
+        #return Response(message, status=200, mimetype='applcation/json')
+        return Response(json.dumps(message, cls=connector.AlchemyEncoder), status=200, mimetype='application/json')
     except Exception:
         message = {'message': 'Unauthorized'}
-        return Response(message, status=401, mimetype='applcation/json')
+        return Response(json.dumps(message, cls=connector.AlchemyEncoder), status=401, mimetype='application/json')
 
 
 # #---- USERS METHODS ---------------------------
@@ -57,7 +58,8 @@ def get_users():
     data = []
     for user in dbResponse:
         data.append(user)
-    return Response(json.dumps(data, cls=connector.AlchemyEncoder), mimetype='application/json')
+    message = {"data":data}
+    return Response(json.dumps(message, cls=connector.AlchemyEncoder), mimetype='application/json')
 
 
 @app.route('/users/<id>', methods = ['GET'])
@@ -83,7 +85,7 @@ def create_test_users():
 
 @app.route('/users', methods = ['POST'])
 def create_user():
-    c =  json.loads(request.form['values'])
+    c = json.loads(request.form['values'])
     user = entities.User(
         username=c['username'],
         name=c['name'],
@@ -133,20 +135,6 @@ def get_Message():
     return Response(json.dumps(data, cls=connector.AlchemyEncoder), mimetype='application/json')
 
 
-@app.route('/messages', methods = ['POST'])
-def create_Message():
-    c = json.loads(request.form['values'])
-    message = entities.Message(
-        content=c['content'],
-        user_from_id=c['user_from_id'],
-        user_to_id=c['user_to_id'],
-    )
-    session = db.getSession(engine)
-    session.add(message)
-    session.commit()
-    return 'Created Message'
-
-
 @app.route('/create_test_messages', methods = ['GET'])
 def create_test_messages():
     db_session = db.getSession(engine)
@@ -187,9 +175,22 @@ def current_chat():
     return Response(json.dumps(data, cls=connector.AlchemyEncoder), mimetype='application/json')
 
 
+@app.route('/chats/<user_from_id>/<user_to_id>', methods = ['GET'])
+def getChats(user_from_id, user_to_id):
+    db_session = db.getSession(engine)
+    chats = db_session.query(entities.Message)\
+        .filter(or_((entities.Message.user_from_id == user_from_id) & (entities.Message.user_to_id == user_to_id),
+                (entities.Message.user_from_id == user_to_id) & (entities.Message.user_to_id == user_from_id)))
+    data = []
+    for chat in chats:
+        data.append(chat)
+    return Response(json.dumps({'response':data}, cls=connector.AlchemyEncoder), mimetype='application/json')
+
+
 @app.route('/send_message', methods=['POST'])
 def send_message():
     msg_data = json.loads(request.data)
+    print(msg_data)
     curr_id = session['logged_user']
     message = entities.Message(
         content=msg_data['content'],
@@ -199,10 +200,25 @@ def send_message():
     de_session = db.getSession(engine)
     de_session.add(message)
     de_session.commit()
-    print('ok')
-    return Response(status=200)
+    message = {'message': 'Se envio el mensaje :)'}
+    return Response(json.dumps(message, cls=connector.AlchemyEncoder), mimetype='applcation/json')
 
+
+@app.route('/messages', methods=['POST'])
+def create_messages():
+    msg_data = json.loads(request.data)
+    message = entities.Message(
+        content=msg_data['content'],
+        user_from_id=msg_data['user_from_id'],
+        user_to_id=msg_data['user_to_id'],
+    )
+    session = db.getSession(engine)
+    session.add(message)
+    session.commit()
+    message = {'message': 'Se envio el mensaje mobile :)'}
+    return Response(json.dumps(message, cls=connector.AlchemyEncoder), status=200, mimetype='applcation/json')
+    #return "Mensaje enviado"
 
 if __name__ == '__main__':
     app.secret_key = ".."
-    app.run(port=8080, threaded=True, host=('127.0.0.1'))
+    app.run(port=8080, threaded=True, host=('10.100.224.106'))
